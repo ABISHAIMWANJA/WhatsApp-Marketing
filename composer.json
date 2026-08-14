@@ -1,0 +1,103 @@
+{
+    "name": "laravel/laravel",
+    "type": "project",
+    "description": "The skeleton application for the Laravel framework.",
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "box/spout": "3.3.0",
+        "dompdf/dompdf": "3.1.0",
+        "endroid/qr-code": "^5.0",
+        "gettext/gettext": "^5.7.3",
+        "gettext/php-scanner": "^2.0.1",
+        "giggsey/libphonenumber-for-php": "^9.0.8",
+        "guzzlehttp/guzzle": "^7.9",
+        "intervention/image": "^3.11.3",
+        "laravel/cashier": "^15.7.0",
+        "laravel/fortify": "^1.30",
+        "laravel/framework": "^12.0",
+        "laravel/helpers": "^1.7.2",
+        "laravel/socialite": "^5.21.0",
+        "laravel/tinker": "^2.10.1",
+        "league/flysystem-aws-s3-v3": "^3.29.0",
+        "livelyworks/laraware": "*",
+        "mk-j/php_xlsxwriter": "^0.39.0",
+        "openai-php/laravel": "^0.14.0",
+        "predis/predis": "^3.0",
+        "propaganistas/laravel-disposable-email": "^2.4.15",
+        "pusher/pusher-php-server": "^7.2",
+        "razorpay/razorpay": "^2.9",
+        "unn/gettext-blade": "dev-main",
+        "yoomoney/yookassa-sdk-php": "^3.9",
+        "google/apiclient": "^2.18"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.24.1",
+        "laravel/pint": "^1.22.1",
+        "laravel/sail": "^1.43.1",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.8.2",
+        "phpunit/phpunit": "^11.5.3",
+        "spatie/laravel-ignition": "^2.9.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        },
+        "files": [
+            "app/Yantrana/Support/php-gettext-1.0.12/gettext.inc",
+            "app/Yantrana/Support/translation-helpers.php",
+            "app-boot-helper.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/livelyworks/Gettext-Blade"
+        }
+    ],
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+        ],
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "post-create-project-cmd": [
+            "@php artisan key:generate --ansi",
+            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
+            "@php artisan migrate --graceful --ansi"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -1,0 +1,12 @@
+*.zip
+/node_modules
+.phpunit.result.cache
+docker-compose.override.yml
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+__MACOSX
+__MACOSX/*
+!.gitignore
+.DS_Store

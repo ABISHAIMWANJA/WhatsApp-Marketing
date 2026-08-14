@@ -1,0 +1,485 @@
+
+@media (prefers-color-scheme: light) {
+  .dark-theme-small-logo ,.dark-theme-logo{
+      display: none !important;
+  }
+}
+@media (prefers-color-scheme: dark) {
+:root {
+    // app background color use
+    --lw-app-bg-color: #1E1E25;
+
+    // text color and button color use
+    --lw-white-color: #fff;
+
+    // all side cards, table, nav menu ,sidebar ,fieldset and modals color use
+    --lw-dark-blue-color: #15151a;
+
+    // some primary color use
+    --lw-primary-color: #2bac32;
+
+    // button color use 
+    --lw-black-color: #000;
+
+    // border top , bottom  and color default button color use
+    --lw-border-color:#282c31;
+
+    // dropdown-menu ,form control, sidebar hover / active tab color and whatsapp chat background color use
+    --lw-dark-brown-color: #1E1E25;
+
+    // alert-warning ,alert-danger and alert default color use
+    --lw-blue-color:#3F51B5;
+}
+html>body {
+    background: var(--lw-app-bg-color)  url("../../imgs/wa-message-bg-dark.png") repeat!important;
+    color: #d1d1d1;
+    color-scheme: dark;
+}
+.btn.btn-primary ,.bg-primary ,.bg-success ,.conversation-compose .send .circle ,.page-item.active .page-link ,.btn-success ,.btn.btn-light.lw-save-language{
+    color: var(--lw-white-color) !important;
+    border-color: var(--lw-primary-color) !important;
+    background-color: var(--lw-primary-color) !important;
+}
+.text-success ,.text-primary ,.text-green{
+    color: var(--lw-primary-color) !important;
+}
+a{
+    color: var(--lw-primary-color);
+}
+table.dataTable.dtr-inline.collapsed > tbody > tr > td:first-child:before{
+    background-color: var(--lw-primary-color) !important;
+}
+.input-group-append .btn.btn-outline-success{
+    color: var(--lw-white-color) !important;
+    border: 1px solid var(--lw-primary-color) !important;
+    background: var(--lw-primary-color) !important;
+}
+.card.lw-whatsapp-chat-block-container .nav-tabs{
+    border-color: 1px solid var(--lw-primary-color) !important;
+}
+.card,.main-content .navbar-top,.bg-gradient-default,.card-header,fieldset {
+    background: var(--lw-dark-blue-color) !important;
+    border: 0;
+    box-shadow: 0 1px 20px 0 rgba(0, 0, 0, .1) !important;
+    .text-muted.text-sm span{
+        font-size: 16px !important;
+        font-weight: 600;
+    }
+}
+.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6 {
+    color: var(--lw-white-color) !important;
+}
+.text-muted {
+    color: #c3c3c3 !important;
+}
+.bg-white,
+.navbar-collapse {
+    background-color: var(--lw-dark-blue-color) !important;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--lw-dark-blue-color)!important;
+}
+.navbar-light .navbar-nav .nav-link,.nav-link .text-dark {
+    color: #c3c3c3 !important;
+    &:hover {
+        color: var(--lw-white-color) !important;
+    }
+}
+.table td,.table th {
+    border-color: var(--lw-border-color) !important;
+}
+.thead-light {
+    th {
+        background: var(--lw-dark-blue-color) !important;
+        border-color: var(--lw-border-color) !important;
+        color: var(--lw-white-color) !important;
+    }
+}
+div.dataTables_wrapper table.dataTable>tbody>tr:hover {
+    background-color: var(--lw-app-bg-color) !important;
+}
+.btn.btn-light,.swal2-cancel.swal2-styled {
+    background-color: #4f4f4f  !important;
+    border-color: #4f4f4f  !important;
+    color: #fff !important;
+}
+.text-dark,.text-blue,.lw-details-item,.swal2-html-container {
+    color: var(--lw-white-color) !important;
+}
+fieldset,.card-body.card-deck .card {
+    border: 1px solid var(--lw-border-color) !important;
+}
+fieldset legend ,.btn-group .btn.btn-black.dropdown-toggle ,.btn.btn-secondary{
+    color: var(--lw-white-color) !important;
+    background-color: var(--lw-dark-brown-color) !important;
+    border: 1px solid var(--lw-border-color) !important;
+    .text-muted {
+        color: #aba1a1 !important;
+    }
+}
+legend{
+    cursor: pointer;
+    & img{
+        background-color: var(--lw-white-color);
+    }
+}
+label h3{
+  & img{
+    background-color: var(--lw-white-color);
+  }
+}
+.modal-content,.modal .modal-body,.modal-open .modal.lw-has-form .modal-footer ,.selectize-dropdown{
+    background-color: var(--lw-dark-blue-color) !important;
+    & .selectize-dropdown-content{
+        color: var(--lw-white-color);
+        cursor: pointer;
+    }
+}
+.modal-content .modal-header {
+    border-bottom: 1px solid var(--lw-border-color);
+}
+.modal-open .modal.lw-has-form .modal-footer,hr {
+    border-top: 1px solid var(--lw-border-color);
+}
+.card-header:first-child {
+    cursor: pointer;
+}
+.form-control,.selectize-input.full,.selectize-input, .selectize-control.single .selectize-input.input-active {
+    color: #cfcfcf !important;
+    background-color: var(--lw-dark-brown-color)  !important;
+    border: 1px solid var(--lw-border-color) !important;
+}
+.card.lw-whatsapp-chat-block-container {
+    .lw-whatsapp-chat-window {
+      .conversation-compose {
+        > div,
+        .emojionearea .emojionearea-editor {
+          background-color: #2a3942 !important;
+          color: #cfcfcf;
+        }
+        .photo:after {
+          border-color: transparent transparent transparent #2a3942;
+        }
+        .emoji {
+          background-color: #2a3942 !important;
+        }
+      }
+    }
+  }
+.input-group-text {
+    background-color: var(--lw-dark-blue-color) !important;
+    border: 1px solid var(--lw-border-color) !important;
+    margin-left: 1px;
+}
+.card-body.card-deck .card {
+    border: 1px solid var(--lw-border-color) !important;
+    padding: 0;
+
+    .card-footer {
+        background-color: var(--lw-dark-blue-color);
+    }
+}
+.form-control-label {
+    color: #cfcfcf !important;
+}
+.navbar-light .navbar-nav .active>.nav-link,
+.navbar-light .navbar-nav .nav-link:hover,.navbar-light .navbar-nav .nav-link.active,
+.active>.navbar-light .navbar-nav .nav-link {
+    color: var(--lw-white-color) !important;
+    background: #00000063;
+    border-left: 2px solid var(--lw-white-color)
+}
+.navbar-vertical.navbar-expand-md .navbar-nav .nav-link.active:before {
+    border: none !important;
+}
+.navbar-nav .nav-item .nav-link {
+    border-left: 2px solid transparent;
+}
+.lw-form-card-box {
+    .input-group.input-group-alternative {
+        border: none;
+    }
+    .form-control {
+        border-radius: 0 !important;
+    }
+    .card-footer {
+        background-color: var(--lw-dark-blue-color);
+    }
+}
+.lw-guest-page {
+    .navbar-horizontal .navbar-nav .nav-link {
+        color: var(--lw-white-color);
+    }
+    .lw-page-dropdown button {
+        background: transparent;
+    }
+}
+div:where(.swal2-container) div:where(.swal2-popup) {
+    background: var(--lw-dark-blue-color) !important;
+}
+.nav-tabs {
+    .nav-link {
+        background-color: #373636; 
+        color: var(--lw-white-color);
+        &.active {
+            background-color: var(--lw-primary-color) !important;
+            color: var(--lw-white-color);
+        }
+    }
+}
+.selectize-dropdown .active,.selectize-dropdown .optgroup-header {
+    background-color: var(--lw-dark-brown-color);
+    color: var(--lw-white-color);
+}
+.btn-default {
+    background-color: #3f4045  !important;
+    border-color: #3f4045  !important;
+    color: var(--lw-white-color) !important;
+}
+.flowchart-operator{
+    background: #131318  !important;
+    color: var(--lw-black-color);
+    border-color: var(--lw-border-color) !important;
+    border-radius: 6px;
+    .flowchart-operator-title {
+        font-weight: 400 !important;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        border-bottom: 1px solid var(--lw-border-color) !important;
+        color: var(--lw-white-color);
+        background: var(--lw-black-color) !important;
+    }
+    .flowchart-operator-inputs-outputs {
+        color: #cfcfcf;
+        font-weight: 500;
+    }
+}
+dd .lw-btn.btn.btn-sm.btn-outline-default {
+    background-color: var(--lw-border-color);
+    border-color: var(--lw-border-color);
+    color: var(--lw-white-color);
+}
+.badge-success {
+    background-color: var(--lw-primary-color);
+    color: var(--lw-white-color);
+}
+fieldset pre {
+    color: var(--lw-white-color);
+}
+.list-group-item {
+    background-color: var(--lw-dark-blue-color) !important;
+    border: 0;
+    border-bottom: 1px solid var(--lw-border-color) !important;
+    border-radius: 0;
+    &:hover,
+    &:focus {
+        background-color: var(--lw-black-color) !important;
+    }
+}
+// whatsapp chat
+.card.lw-whatsapp-chat-block-container {
+  .selectize-control.multi .selectize-input > div{
+    border: 0;
+  }
+    .lw-whatsapp-chat-window {
+      .lw-contact-list {
+        .lw-contact {
+          border-radius: 0;
+          border-top: 1px solid var(--lw-border-color) !important;
+          border-bottom: none !important;
+        }
+      }
+      .conversation {
+        background: var(--lw-black-color) url("../../imgs/wa-message-bg-dark.png") repeat !important;
+      }
+      .message {
+        color: var(--lw-white-color);
+        &.sent {
+          background-color: #1f4f3a;
+          &:after {
+            border-color: transparent transparent transparent #1f4f3a;
+          }
+        }
+        &.received {
+          background: #222c32;
+          &:after {
+            border-color: transparent #222c32 transparent transparent;
+          }
+        }
+      }
+      .metadata {
+        .time {
+          color: #b3b3b3;
+        }
+      }
+      .user-bar {
+        background: #0b1014;
+        border-bottom: 1px solid #4b4b4b;
+      }
+    }
+    .nav-tabs {
+      .nav-link {
+        background-color: var(--lw-dark-blue-color);
+        color: var(--lw-white-color);
+        @media (max-width: 768px) {
+          background-color: transparent;
+        }
+      }
+    }
+    .shadow-lg{
+        box-shadow: none !important;
+    }
+  }
+  .lw-whatsapp-preview-message-container {
+    .lw-whatsapp-preview {
+      .card {
+        background-color: #1f4f3a !important;
+        color: #bfbfbf;
+        box-shadow: none !important;
+        .card-footer {
+          border-top: 0;
+          .lw-whatsapp-buttons {
+            .list-group-item {
+              background-color: #1f4f3a !important;
+              border-bottom: 1px solid var(--lw-border-color) !important;
+            }
+          }
+          .list-group-item {
+            border-top: 1px solid var(--lw-border-color);
+          }
+        }
+      }
+    }
+  }
+  .lw-whatsapp-preview > .card::after{
+    border-color :transparent var(--lw-dark-blue-color) transparent transparent;
+  }
+  .btn.btn-danger{
+    color: var(--lw-white-color) !important;
+    background-color: #c11616 !important;
+    border: 1px solid #c11616 !important;
+  }
+  .btn.btn-info{
+    color: var(--lw-white-color) !important;
+  }
+  .dropdown-menu{
+    background-color: var(--lw-dark-brown-color) !important;
+    color: var(--lw-white-color) !important;
+    box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22) !important;
+  }
+  .dropdown-item{
+    color: var(--lw-white-color) !important;
+    &:hover,&::before{
+      background-color: var(--lw-primary-color) !important;
+    }
+  }
+  .dropdown-header:hover{
+    background-color: var(--lw-dark-brown-color) !important;
+  }
+  .navbar .dropdown-menu-arrow:before{
+    background-color: var(--lw-dark-brown-color) !important;
+  }
+  .alert-light{
+    background-color: var(--lw-black-color) !important;
+    border: 1px solid var(--lw-border-color);
+  }
+  .alert-warning ,.alert-danger ,.alert-default{
+    border-color: var(--lw-blue-color) !important;
+    background-color: var(--lw-blue-color) !important;
+  }
+  .page-link ,.page-item.disabled .page-link{
+    background-color: var(--lw-dark-brown-color) !important;    
+    border: 1px solid var(--lw-border-color) !important;
+  }
+  .form-group .input-group.input-group-alternative{
+    border: none !important;
+  }
+  .btn-warning, .badge.badge-warning{
+    border-color: #bb9018 !important;
+    background-color: #bb9018 !important;
+    color: var(--lw-white-color) !important;
+  }
+  .badge.bg-yellow{
+    background-color: var(--lw-white-color) !important;
+    color: var(--lw-black-color) !important;
+  }
+  .lw-breadcrumb-container{
+    background-color: var(--lw-dark-blue-color) !important;
+  }
+  .close>span:not(.sr-only){
+    color: var(--lw-white-color) !important;
+  }
+  .input-group-append .btn.btn-outline-light{
+    background: var(--lw-dark-brown-color) !important;
+    color: var(--lw-white-color) !important;
+    border: 1px solid var(--lw-border-color) !important;
+  }
+  .dataTables_wrapper .dataTables_length select{
+    background-color: var(--lw-dark-blue-color) !important;
+    color: var(--lw-white-color);
+  }
+  .badge.badge-danger{
+    background-color: #f5365c !important;
+    color: var(--lw-white-color);
+  }
+  .btn-dark{
+    background-color: var(--lw-black-color) !important;
+    border: 1px solid var(--lw-black-color);
+  }
+  .selectize-control.lw-form-field ,.selectize-control.form-control{
+    background-color: transparent !important;
+    border: none !important;
+    .selectize-input.full, .selectize-input{
+      border: 1px solid var(--lw-border-color) !important;
+    }
+  }
+  .fa-stripe,.fa-paypal{
+    color: #5872ff;
+    font-size: 20px;
+  }
+  .lw-has-form fieldset .input-group{
+    border: 1px solid var(--lw-border-color);
+    background-color: var(--lw-dark-brown-color);
+    .lw-form-field.form-control{
+        border: none !important;
+    }
+  }
+  .lw-whatsapp-preview-container{
+    background: var(--lw-app-bg-color)  url("../../imgs/wa-message-bg-dark.png") repeat!important;
+  }
+  .navbar-toggler-icon{
+    display: none;
+  }
+  .fa.fa-bars{
+    color: var(--lw-white-color);
+    font-size: 21px;display: inline-block !important;
+  }
+  .nav-link{
+    color: var(--lw-white-color);
+  }
+  .light-theme-logo,.light-theme-small-logo{
+    display: none !important;
+  }
+  .card-footer{
+    background-color: var(--lw-dark-blue-color);
+   }
+  @media (max-width: 768px) {
+    .lw-language-block .form-control,.lw-language-block .input-group-text{
+     border: 1px solid var(--lw-border-color) !important;
+    }
+    .navbar-collapse .navbar-toggler span{
+      background: white;
+    }
+ }
+ .selectize-control.single .selectize-input:after{
+  border-color: #ffffff transparent transparent transparent;
+ }
+ @media (max-width: 768px) {
+  .card.lw-whatsapp-chat-block-container .lw-contact-list-block, .card.lw-whatsapp-chat-block-container .lw-contact-crm-block{
+    background-color: var(--lw-black-color);
+   }
+  
+}
+
+
+}
