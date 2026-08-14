@@ -100,22 +100,25 @@ Assumes Ubuntu 22.04/24.04 with root or sudo access.
 
 ### Step 1 — Install the stack
 
+This is **Laravel 12** and requires **PHP 8.2 or newer**. PHP 8.3 is used below.
+
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y nginx mysql-server git unzip curl \
+sudo apt install -y nginx mysql-server redis-server git unzip curl \
   php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl \
-  php8.3-zip php8.3-bcmath php8.3-gd php8.3-intl
+  php8.3-zip php8.3-bcmath php8.3-gd php8.3-intl php8.3-exif
 
 # Composer
 curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
-
-# Node.js (only if the project builds front-end assets)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
 ```
 
-Check your `composer.json` for the required PHP version and adjust `php8.3` if needed.
+Why these extensions: `gd` + `exif` for `intervention/image` (media processing),
+`zip` for `box/spout` and `php_xlsxwriter` (contact import/export), `intl` for
+`libphonenumber` (phone number validation), `bcmath` for the payment gateways.
+
+**No Node.js needed.** This project has no `package.json` — front-end assets are
+pre-built and committed under `public/dist`. There is nothing to compile.
 
 ### Step 2 — Clone the project
 
@@ -132,10 +135,25 @@ For a private repo, use a deploy key or a PAT in the clone URL.
 
 ```bash
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build      # skip if there are no front-end assets
 ```
 
-This is where `vendor/` and `node_modules/` get rebuilt — the 400+ MB you did not push.
+This rebuilds the 300 MB `vendor/` directory you did not push.
+
+Two of the dependencies are not plain Packagist installs, so watch for errors here:
+
+- `unn/gettext-blade` is pulled from a GitHub VCS repository declared in
+  `composer.json`. If the server cannot reach GitHub, or the package is private,
+  this step fails.
+- `livelyworks/laraware` is version-constrained as `*`, meaning composer takes the
+  newest release available.
+
+If `composer install` reports a missing lock file, see the note below.
+
+> **On `composer.lock`:** if the file exists on your laptop, commit it — it pins every
+> dependency to the exact version you tested against, and `composer install` uses it.
+> Without it you must run `composer update` on the server instead, which resolves fresh
+> versions and can pull in changes you have not tested. Check with `Test-Path composer.lock`
+> on Windows; if it is there, `git add composer.lock` and push.
 
 ### Step 4 — Configure the environment
 
@@ -151,16 +169,31 @@ Set at minimum:
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://yourdomain.com
+FORCE_HTTPS=true
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_DATABASE=whatsapp_marketing
 DB_USERNAME=wa_user
 DB_PASSWORD=<strong-password>
+
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+SESSION_DRIVER=database
 ```
 
 `APP_DEBUG=false` is not optional in production — leaving it true exposes your database
 credentials and full stack traces on any error page.
+
+`QUEUE_CONNECTION` matters just as much. Laravel's default is `sync`, which runs every
+job inside the web request — a bulk campaign to a few thousand contacts would hang the
+browser and hit PHP's execution timeout. Set it to `redis` (or `database`) and run the
+worker from Step 10.
+
+Copy your real credentials across from the `.env` on your laptop — Pusher (live chat),
+OpenAI (AI replies), your mail SMTP details, and whichever payment gateway you use
+(Stripe / Paystack / Razorpay / YooKassa). Every supported key is listed in
+`.env.example`.
 
 ### Step 5 — Create the database
 
@@ -175,9 +208,14 @@ php artisan migrate --force
 ### Step 6 — Set permissions
 
 ```bash
+php artisan storage:link
 sudo chown -R www-data:www-data /var/www/whatsapp-marketing
 sudo chmod -R 775 /var/www/whatsapp-marketing/storage /var/www/whatsapp-marketing/bootstrap/cache
 ```
+
+`storage:link` creates the `public/storage` symlink. It is gitignored (a symlink is
+machine-specific), so it must be recreated on every server — without it, uploaded media
+and campaign attachments return 404.
 
 ### Step 7 — Configure Nginx
 
@@ -293,7 +331,6 @@ sudo ufw enable
 cd /var/www/whatsapp-marketing
 git pull origin main
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build
 php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 sudo systemctl restart whatsapp-worker
