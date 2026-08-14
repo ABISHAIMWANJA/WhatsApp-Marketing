@@ -133,11 +133,30 @@ For a private repo, use a deploy key or a PAT in the clone URL.
 
 ### Step 3 — Install dependencies
 
+This project ships without a `composer.lock`, so the **first** deploy uses `update`:
+
+```bash
+composer update --no-dev --optimize-autoloader
+```
+
+This rebuilds the 300 MB `vendor/` directory you did not push, and writes a
+`composer.lock` recording the exact versions it resolved.
+
+Once the app is confirmed working, commit that lock file so future deploys are
+reproducible:
+
+```bash
+git add composer.lock
+git commit -m "Add composer.lock from first deploy"
+git push origin main
+```
+
+From then on, every deploy uses `install`, which installs those pinned versions
+rather than re-resolving:
+
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
-
-This rebuilds the 300 MB `vendor/` directory you did not push.
 
 Two of the dependencies are not plain Packagist installs, so watch for errors here:
 
