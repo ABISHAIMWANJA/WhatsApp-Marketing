@@ -1,0 +1,77 @@
+# ---- Dependencies (rebuilt on the server, never committed) ----
+/vendor
+/node_modules
+/.pnp
+.pnp.js
+
+# ---- Build output ----
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+
+# ---- Laravel runtime state ----
+/storage/framework/cache/*
+!/storage/framework/cache/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/storage/framework/testing
+/storage/logs/*
+!/storage/logs/.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# ---- Secrets: never commit these ----
+.env
+.env.*
+!.env.example
+auth.json
+*.pem
+*.key
+*.p12
+oauth-private.key
+oauth-public.key
+
+# ---- WhatsApp session / auth data (contains live credentials) ----
+/storage/app/whatsapp
+/storage/app/sessions
+/sessions
+/.wwebjs_auth
+/.wwebjs_cache
+/baileys_auth_info
+*.session
+*.session-journal
+
+# ---- Databases & dumps ----
+/database/*.sqlite
+/database/*.sqlite-journal
+*.sql
+*.sql.gz
+*.dump
+
+# ---- User-uploaded media (keep out of git; back these up separately) ----
+/storage/app/public/uploads
+/storage/app/public/media
+/public/uploads
+
+# ---- Local tooling ----
+.phpunit.result.cache
+.phpunit.cache
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/.vagrant
+
+# ---- OS cruft ----
+.DS_Store
+Thumbs.db
+desktop.ini
