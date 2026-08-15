@@ -4,12 +4,32 @@ The app is live at https://whatsapp.bomalogic.com
 
 ## How it is deployed
 
-Plain `docker compose` from `/opt/whatsapp-marketing` on the VPS (84.247.187.164),
-routed by the Dokploy-managed Traefik. It publishes no host ports, so the other
-applications on that host are unaffected. Because it was not created through
-Dokploy, it does **not** appear in the Dokploy UI — see "Moving into Dokploy".
+Managed by **Dokploy** on the VPS (84.247.187.164), under project `Whatsapp`,
+service `whatsapp-marketing`.
 
-Services: `app` (nginx + PHP-FPM), `queue`, `scheduler`, `mysql`, `redis`.
+| | |
+|---|---|
+| composeId | `DuiogBys2ZSAuKUAdLyVi` |
+| environmentId | `tnVSrbv6hqgbAyueJJ1SA` |
+| container prefix | `compose-bypass-haptic-hard-drive-8xv8wj` |
+| source | Git → `https://github.com/ABISHAIMWANJA/WhatsApp-Marketing.git`, branch `main` |
+| compose path | `./docker-compose.yml` |
+
+Services: `app` (nginx + PHP-FPM), `queue`, `scheduler`, `mysql`, `redis`. No host
+ports are published, so the other applications on this host are unaffected.
+
+**Routing is Dokploy's**, not the compose file's — a domain record
+(`whatsapp.bomalogic.com` → service `app`, port 80, Let's Encrypt) injects the
+Traefik labels at deploy time. Do not add Traefik labels back into
+`docker-compose.yml`: two routers matching the same Host rule is undefined
+behaviour.
+
+**To deploy:** push to `main`, then hit **Deploy** in the Dokploy UI. Environment
+variables live in Dokploy's Environment tab, not in a `.env` on disk.
+
+`/opt/whatsapp-marketing` is a leftover checkout from the original manual deploy.
+It still holds `database.sql` and a `.env`. Keep it stopped — never run
+`docker compose up` there, or a second stack will contend for the domain.
 
 ## Database
 
@@ -26,10 +46,13 @@ Rebuilding the database from scratch:
 
 ```bash
 cd /opt/whatsapp-marketing
-docker compose exec -T mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database.sql
-docker compose exec -T mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database/schema/laravel-sessions.sql
-docker compose restart app
+D=$(docker ps -qf "name=compose-bypass.*mysql")
+docker exec -i $D sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database.sql
+docker exec -i $D sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database/schema/laravel-sessions.sql
 ```
+
+The app containers crash-loop until the tables exist, then recover on their own
+within a minute. Expect 48 tables: the vendor's 47 plus `sessions`.
 
 ## Two failure modes worth remembering
 
@@ -112,10 +135,17 @@ needs nothing extra.
 
 ## Then
 
-- Add the integration credentials to `.env` on the server (Pusher, OpenAI, SMTP,
-  payment gateway), then `docker compose up -d`. Copy them from the laptop's `.env`.
-- Back up the generated secrets somewhere safe — they exist only in the server's
-  `.env`, and losing `APP_KEY` makes encrypted data unrecoverable:
+- Log in and change the admin password. `admin.txt` from the vendor package holds
+  the default, identical for every copy of this script sold.
+- Add the integration credentials in Dokploy's **Environment** tab (Pusher, OpenAI,
+  SMTP, payment gateway), then redeploy. Until then: no live chat, no AI replies,
+  no outgoing email.
+- Make the GitHub repository **private**. A commercial licensed script is currently
+  world-readable. Dokploy's Git source will then need a deploy key.
+- Rotate `APP_KEY` — it was exposed in a chat transcript. Free to change while
+  nothing is encrypted with it yet; after real users exist it invalidates sessions
+  and encrypted data.
+- Back up the secrets somewhere safe. They now live in Dokploy's Environment tab:
 
   ```bash
   grep -E '^(APP_KEY|DB_PASSWORD|DB_ROOT_PASSWORD)=' /opt/whatsapp-marketing/.env
@@ -143,24 +173,33 @@ needs nothing extra.
   `PermitRootLogin prohibit-password` — this host runs six other production apps.
 - A pending kernel update and reboot are outstanding on the host.
 
-## Moving into Dokploy
+## Driving Dokploy from the shell
 
-To manage this from the Dokploy UI alongside the other apps. The compose file and
-Dockerfile do not change — only who runs them. This recreates the containers and
-the MySQL volume, so the database must be re-imported afterwards.
+The UI covers everyday use. These are here because the API is undocumented and
+the field names took some digging.
 
-1. Copy the current secrets out of `/opt/whatsapp-marketing/.env` — reuse the same
-   `APP_KEY`, or every existing session and encrypted value becomes unreadable.
-2. Stop the manual stack so it does not contend for the domain:
-   `cd /opt/whatsapp-marketing && docker compose down` (volumes are kept).
-3. Dokploy → Create → **Docker Compose**; source GitHub, repo
-   `ABISHAIMWANJA/WhatsApp-Marketing`, branch `main`, compose path
-   `docker-compose.yml`.
-4. Domain `whatsapp.bomalogic.com`, service `app`, container port `80`, HTTPS with
-   Let's Encrypt. Map no host ports.
-5. Paste the environment, then Deploy.
-6. Re-import `database.sql` and `database/schema/laravel-sessions.sql` into the new
-   MySQL container (see "Database" above).
+Authenticate once per session (keeps the key out of shell history):
 
-The manual checkout at `/opt/whatsapp-marketing` can stay as a fallback; leave it
-stopped so the two stacks never both claim the domain.
+```bash
+read -rsp "Dokploy API key: " DOKPLOY_KEY; echo; export DOKPLOY_KEY
+```
+
+The API is tRPC at `http://localhost:3000/api/trpc/<router>.<procedure>`, POST with
+a `{"json":{...}}` body and an `x-api-key` header. To discover a procedure's
+schema, POST an empty payload — the Zod error names every required field:
+
+```bash
+curl -s -X POST -H "x-api-key: $DOKPLOY_KEY" -H "Content-Type: application/json" \
+  -d '{"json":{}}' "http://localhost:3000/api/trpc/domain.create" | head -c 1000
+```
+
+Deploy:
+
+```bash
+curl -s -X POST -H "x-api-key: $DOKPLOY_KEY" -H "Content-Type: application/json" \
+  -d '{"json":{"composeId":"DuiogBys2ZSAuKUAdLyVi"}}' \
+  "http://localhost:3000/api/trpc/compose.deploy"
+```
+
+Useful procedures: `project.all`, `compose.create`, `compose.update`,
+`compose.deploy`, `domain.create`.
