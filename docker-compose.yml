@@ -68,6 +68,11 @@ services:
       --timeout=120
     volumes:
       - storage-app:/var/www/html/storage/app
+    # The image's HEALTHCHECK curls localhost/up, which only the web
+    # container serves. This one runs artisan, so the check can never
+    # pass and the container would sit permanently "unhealthy".
+    healthcheck:
+      disable: true
     depends_on:
       app:     { condition: service_started }
       mysql:   { condition: service_healthy }
@@ -87,6 +92,9 @@ services:
     command: php artisan schedule:work
     volumes:
       - storage-app:/var/www/html/storage/app
+    # Same as queue: no HTTP listener, so the image healthcheck is wrong.
+    healthcheck:
+      disable: true
     depends_on:
       app:     { condition: service_started }
       mysql:   { condition: service_healthy }
