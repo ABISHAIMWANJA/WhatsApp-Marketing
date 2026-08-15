@@ -1,34 +1,50 @@
-# Where this stopped — resume here
+# Deployment notes
 
-Everything is deployed and running except the database schema.
+The app is live at https://whatsapp.bomalogic.com
 
-## State
+## How it is deployed
 
-Working:
+Plain `docker compose` from `/opt/whatsapp-marketing` on the VPS (84.247.187.164),
+routed by the Dokploy-managed Traefik. It publishes no host ports, so the other
+applications on that host are unaffected. Because it was not created through
+Dokploy, it does **not** appear in the Dokploy UI — see "Moving into Dokploy".
 
-- Code on GitHub, `main` branch (19 MB; `vendor/` excluded and rebuilt on the server)
-- Docker stack builds cleanly and all five containers start:
-  `app`, `queue`, `scheduler`, `mysql`, `redis`
-- Checked out on the VPS at `/opt/whatsapp-marketing`
-- `.env` generated on the server with `APP_KEY` and both DB passwords (mode 0600)
-- Traefik routing configured for `whatsapp.bomalogic.com` with Let's Encrypt
+Services: `app` (nginx + PHP-FPM), `queue`, `scheduler`, `mysql`, `redis`.
 
-Blocked:
+## Database
 
-- The `configurations` table does not exist, so the app cannot boot.
+This script ships **no Laravel migrations** — `database/` contains only `factories`
+and `seeders`. The schema comes from `database.sql` in the vendor package
+(`Launch Your WhatsApp Marketing SaaS Business…zip` → `Upload_Code.zip`), which
+creates 47 tables. It carries no `CREATE DATABASE`/`USE`, so it imports directly.
 
-## Why
+Laravel's own `sessions` table is **not** in that dump and must be added
+separately from `database/schema/laravel-sessions.sql`. `jobs` and `failed_jobs`
+are included, so the database queue driver needs nothing extra.
 
-This script has **no Laravel migrations** — `database/` contains only `factories`
-and `seeders`. There is no installer route, no `install/` directory, and no artisan
-install command. The schema ships as a **SQL dump in the vendor's package**, and
-`.gitignore` excludes `*.sql`, so it never reached GitHub.
+Rebuilding the database from scratch:
+
+```bash
+cd /opt/whatsapp-marketing
+docker compose exec -T mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database.sql
+docker compose exec -T mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' < database/schema/laravel-sessions.sql
+docker compose restart app
+```
+
+## Two failure modes worth remembering
 
 The app queries `configurations` during boot (`AppServiceProvider::boot()` →
-`getAppSettings('enable_stripe')`), with no guard for a missing table. That is why
-even `php artisan migrate` fails — the framework cannot boot far enough to run it.
+`getAppSettings('enable_stripe')`) with no guard for a missing table. On an empty
+database *every* artisan command fails, including `migrate` — the framework cannot
+boot far enough to run it.
 
-## To finish
+With `SESSION_DRIVER=database` and no `sessions` table, the stack looks healthy
+while every page 500s: `/up` never starts a session, so the health check and
+`docker compose ps` both report success. Trust the browser over the health check.
+
+## Old notes — finding the schema
+
+### Locating the vendor dump (already done)
 
 1. On the laptop, find the SQL dump — either in
    `C:\Users\Mwanja\Desktop\WhatsApp Marketing` or in the original vendor package
@@ -125,8 +141,26 @@ needs nothing extra.
   pasted into a chat transcript.
 - SSH uses root password auth. Move to key-based auth and set
   `PermitRootLogin prohibit-password` — this host runs six other production apps.
-- This stack was deployed with plain `docker compose`, so it does **not** appear in
-  the Dokploy dashboard. To manage it there instead, create a Dokploy
-  *Docker Compose* application pointed at this repo, service `app`, port `80`,
-  domain `whatsapp.bomalogic.com`. The compose file and Dockerfile do not change.
 - A pending kernel update and reboot are outstanding on the host.
+
+## Moving into Dokploy
+
+To manage this from the Dokploy UI alongside the other apps. The compose file and
+Dockerfile do not change — only who runs them. This recreates the containers and
+the MySQL volume, so the database must be re-imported afterwards.
+
+1. Copy the current secrets out of `/opt/whatsapp-marketing/.env` — reuse the same
+   `APP_KEY`, or every existing session and encrypted value becomes unreadable.
+2. Stop the manual stack so it does not contend for the domain:
+   `cd /opt/whatsapp-marketing && docker compose down` (volumes are kept).
+3. Dokploy → Create → **Docker Compose**; source GitHub, repo
+   `ABISHAIMWANJA/WhatsApp-Marketing`, branch `main`, compose path
+   `docker-compose.yml`.
+4. Domain `whatsapp.bomalogic.com`, service `app`, container port `80`, HTTPS with
+   Let's Encrypt. Map no host ports.
+5. Paste the environment, then Deploy.
+6. Re-import `database.sql` and `database/schema/laravel-sessions.sql` into the new
+   MySQL container (see "Database" above).
+
+The manual checkout at `/opt/whatsapp-marketing` can stay as a fallback; leave it
+stopped so the two stacks never both claim the domain.
