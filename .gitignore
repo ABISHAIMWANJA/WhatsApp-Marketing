@@ -51,6 +51,9 @@ oauth-public.key
 *.sql
 *.sql.gz
 *.dump
+# Structural DDL kept deliberately. Never put a data dump here — this
+# path is exempt from the *.sql rule above.
+!/database/schema/*.sql
 
 # ---- User-uploaded media (keep out of git; back these up separately) ----
 /storage/app/public/uploads

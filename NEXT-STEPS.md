@@ -75,6 +75,25 @@ even `php artisan migrate` fails — the framework cannot boot far enough to run
    Do not commit the dump — it may carry seed or customer data. Copy it directly to
    the server, and delete `schema.sql` from `/opt/whatsapp-marketing` afterwards.
 
+## Also required: Laravel's sessions table
+
+The vendor's `database.sql` creates their 47 application tables but not
+Laravel's own `sessions` table, which normally comes from framework
+migrations this app does not ship. With `SESSION_DRIVER=database` the
+result is deceptive: `/up` returns 200 and the containers report healthy,
+while every real page returns 500 from `DatabaseSessionHandler->read()`.
+
+Import it once, after the vendor dump:
+
+```bash
+docker compose exec mysql sh -c 'mysql -u root -p"$MYSQL_ROOT_PASSWORD" whatsapp_marketing' \
+  < database/schema/laravel-sessions.sql
+docker compose restart app
+```
+
+`jobs` and `failed_jobs` *are* in the vendor dump, so `QUEUE_CONNECTION=database`
+needs nothing extra.
+
 ## Then
 
 - Add the integration credentials to `.env` on the server (Pusher, OpenAI, SMTP,
