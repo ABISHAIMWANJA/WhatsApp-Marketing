@@ -8,10 +8,9 @@ Two parts: getting the project onto GitHub from your Windows laptop, then onto y
 
 Your project folder is `C:\Users\Mwanja\Desktop\WhatsApp Marketing` (446 MB).
 
-Almost all of that size is `vendor/` and `node_modules/`, which must **not** go into
-git — they are rebuilt on the server from `composer.json` and `package.json`. The
-`.gitignore` in this repo already excludes them. After ignoring them, your repo should
-be well under 20 MB.
+300 MB of that is `vendor/`, which must **not** go into git — it is rebuilt on the
+server from `composer.json`. The `.gitignore` in this repo already excludes it. Once
+ignored, the repo comes to roughly 19 MB.
 
 ### Step 1 — Open PowerShell in the project folder
 
@@ -29,8 +28,8 @@ Get-ChildItem -Directory | ForEach-Object {
 } | Sort-Object -Descending
 ```
 
-Expect `vendor` and `node_modules` to dominate. If something else is large (a database
-dump, a folder of videos or images), add it to `.gitignore` before committing.
+Expect `vendor` to dominate. If something else is large (a database dump, a folder of
+videos or images), add it to `.gitignore` before committing.
 
 ### Step 3 — Initialise git and pull in the .gitignore
 
@@ -53,11 +52,11 @@ git add .
 git status --short | Measure-Object -Line
 ```
 
-If that count is in the tens of thousands, `vendor/` or `node_modules/` slipped through.
-Fix it before committing:
+If that count is in the tens of thousands, `vendor/` slipped through. Fix it before
+committing:
 
 ```powershell
-git rm -r --cached vendor node_modules
+git rm -r --cached vendor
 ```
 
 Confirm the largest staged files are sane:
@@ -94,267 +93,207 @@ it as the password.
 
 ---
 
-## Part 2 — Deploy to your VPS
+## Part 2 — Deploy to the VPS via Dokploy
 
-Assumes Ubuntu 22.04/24.04 with root or sudo access.
+### ⚠️ Read this first
 
-### Step 1 — Install the stack
+This VPS is **not** a bare server. It already runs Dokploy with **Traefik bound to
+ports 80 and 443**, fronting several live applications (Chatwoot, n8n, Documenso,
+Botpress, bomalogic-app, bomasheet).
 
-This is **Laravel 12** and requires **PHP 8.2 or newer**. PHP 8.3 is used below.
+**Do not `apt install nginx` and do not run `certbot` on this host.** Either would
+contend with Traefik for port 80 and can take down every site on the box. All routing
+and TLS is Traefik's job.
 
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y nginx mysql-server redis-server git unzip curl \
-  php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl \
-  php8.3-zip php8.3-bcmath php8.3-gd php8.3-intl php8.3-exif
+The app therefore deploys as a Docker Compose stack that publishes **no host ports**.
+Traefik reaches it over the `dokploy-network` bridge.
 
-# Composer
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
-```
+### What gets deployed
 
-Why these extensions: `gd` + `exif` for `intervention/image` (media processing),
-`zip` for `box/spout` and `php_xlsxwriter` (contact import/export), `intl` for
-`libphonenumber` (phone number validation), `bcmath` for the payment gateways.
+| Service | Role | Host port |
+|---|---|---|
+| `app` | nginx + PHP-FPM (supervisor), serves the site | none — Traefik routes to it |
+| `queue` | `queue:work`, sends campaigns in the background | none |
+| `scheduler` | `schedule:work`, replaces the crontab | none |
+| `mysql` | MySQL 8, capped at a 256 MB buffer pool | none |
+| `redis` | Cache only, 128 MB cap | none |
 
-**No Node.js needed.** This project has no `package.json` — front-end assets are
-pre-built and committed under `public/dist`. There is nothing to compile.
+### Step 1 — Check the server has room
 
-### Step 2 — Clone the project
-
-```bash
-sudo mkdir -p /var/www
-cd /var/www
-sudo git clone https://github.com/ABISHAIMWANJA/WhatsApp-Marketing.git whatsapp-marketing
-cd whatsapp-marketing
-```
-
-For a private repo, use a deploy key or a PAT in the clone URL.
-
-### Step 3 — Install dependencies
-
-This project ships without a `composer.lock`, so the **first** deploy uses `update`:
+The stack adds roughly 700 MB–1 GB of resident memory. Your last login reported
+**55% memory in use and 72% swap**, which is already tight.
 
 ```bash
-composer update --no-dev --optimize-autoloader
+free -h
+df -h /
+docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}"
 ```
 
-This rebuilds the 300 MB `vendor/` directory you did not push, and writes a
-`composer.lock` recording the exact versions it resolved.
+If free memory is under ~1.5 GB, reduce usage before deploying — stop an unused
+Dokploy app, or lower `--innodb-buffer-pool-size` in `docker-compose.yml`. Running
+MySQL on a swapping host causes slow queries and eventual OOM kills.
 
-Once the app is confirmed working, commit that lock file so future deploys are
-reproducible:
+There is also a **pending kernel restart** on that server. Reboot at a quiet moment
+before adding another workload:
 
 ```bash
-git add composer.lock
-git commit -m "Add composer.lock from first deploy"
-git push origin main
+sudo reboot
 ```
 
-From then on, every deploy uses `install`, which installs those pinned versions
-rather than re-resolving:
+### Step 2 — Generate the APP_KEY
+
+Laravel encrypts sessions and stored credentials with this key. Generate it **once**
+and keep it forever — changing it logs out every user and makes already-encrypted data
+unreadable.
 
 ```bash
-composer install --no-dev --optimize-autoloader
+docker run --rm php:8.3-cli-alpine php -r \
+  'echo "base64:".base64_encode(random_bytes(32))."\n";'
 ```
 
-Two of the dependencies are not plain Packagist installs, so watch for errors here:
+Copy the output. The container refuses to boot without it, deliberately — a
+runtime-generated key would differ per container and corrupt sessions.
 
-- `unn/gettext-blade` is pulled from a GitHub VCS repository declared in
-  `composer.json`. If the server cannot reach GitHub, or the package is private,
-  this step fails.
-- `livelyworks/laraware` is version-constrained as `*`, meaning composer takes the
-  newest release available.
+### Step 3 — Create the application in Dokploy
 
-If `composer install` reports a missing lock file, see the note below.
+Open your Dokploy dashboard, then:
 
-> **On `composer.lock`:** if the file exists on your laptop, commit it — it pins every
-> dependency to the exact version you tested against, and `composer install` uses it.
-> Without it you must run `composer update` on the server instead, which resolves fresh
-> versions and can pull in changes you have not tested. Check with `Test-Path composer.lock`
-> on Windows; if it is there, `git add composer.lock` and push.
+1. **Create Application** → type **Docker Compose**
+2. **Source**: GitHub → `ABISHAIMWANJA/WhatsApp-Marketing`, branch `main`
+   (authorise the GitHub provider first if you have not already)
+3. **Compose path**: `docker-compose.yml`
+4. **Domain**: `whatsapp.bomalogic.com`
+   - Service: `app`, container port `80`
+   - Enable **HTTPS** and select **Let's Encrypt**
+5. Do **not** map any host ports.
 
-### Step 4 — Configure the environment
+### Step 4 — Set the environment
 
-```bash
-cp .env.example .env
-nano .env
-php artisan key:generate
-```
-
-Set at minimum:
+In the application's **Environment** tab, paste the contents of `.env.example` and fill
+in the real values. At minimum:
 
 ```ini
+APP_NAME="WhatsApp Marketing"
 APP_ENV=production
+APP_KEY=base64:<the key from Step 2>
 APP_DEBUG=false
-APP_URL=https://yourdomain.com
+APP_URL=https://whatsapp.bomalogic.com
 FORCE_HTTPS=true
 
 DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
+DB_HOST=mysql
 DB_DATABASE=whatsapp_marketing
 DB_USERNAME=wa_user
-DB_PASSWORD=<strong-password>
+DB_PASSWORD=<strong password>
+DB_ROOT_PASSWORD=<different strong password>
 
-QUEUE_CONNECTION=redis
+REDIS_HOST=redis
 CACHE_STORE=redis
 SESSION_DRIVER=database
+QUEUE_CONNECTION=database
 ```
 
-`APP_DEBUG=false` is not optional in production — leaving it true exposes your database
-credentials and full stack traces on any error page.
+`DB_HOST` is `mysql`, **not** `127.0.0.1` — each service is its own container, and
+localhost inside the app container is the app container.
 
-`QUEUE_CONNECTION` matters just as much. Laravel's default is `sync`, which runs every
-job inside the web request — a bulk campaign to a few thousand contacts would hang the
-browser and hit PHP's execution timeout. Set it to `redis` (or `database`) and run the
-worker from Step 10.
+Then copy your integration credentials across from the `.env` on your laptop: Pusher,
+OpenAI, SMTP, and whichever payment gateway you use. `.env.example` lists every key the
+app reads.
 
-Copy your real credentials across from the `.env` on your laptop — Pusher (live chat),
-OpenAI (AI replies), your mail SMTP details, and whichever payment gateway you use
-(Stripe / Paystack / Razorpay / YooKassa). Every supported key is listed in
-`.env.example`.
+> If any of those keys has previously been committed to a repo or shared over chat,
+> rotate it at the provider now rather than after go-live.
 
-### Step 5 — Create the database
+### Step 5 — Deploy
+
+Hit **Deploy**. The first build takes 5–10 minutes: it compiles the PHP extensions and
+resolves all 26 Composer packages.
+
+Watch the logs for:
+
+- `[entrypoint] database is reachable`
+- `[entrypoint] running migrations`
+- `[entrypoint] ready — starting: supervisord`
+
+The build resolves dependencies with `composer update` because this project ships no
+lock file. See Step 7 to make subsequent builds reproducible.
+
+### Step 6 — Verify
 
 ```bash
-sudo mysql -e "CREATE DATABASE whatsapp_marketing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-sudo mysql -e "CREATE USER 'wa_user'@'localhost' IDENTIFIED BY '<strong-password>';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON whatsapp_marketing.* TO 'wa_user'@'localhost'; FLUSH PRIVILEGES;"
-
-php artisan migrate --force
+curl -I https://whatsapp.bomalogic.com/up
 ```
 
-### Step 6 — Set permissions
+Expect `HTTP/2 200`. Then in a browser, confirm the login page loads over HTTPS with a
+valid certificate.
+
+If Traefik returns 404, the domain is not bound to the `app` service — recheck Step 3.
+If it returns 502, the container is unhealthy; check its logs.
+
+Confirm the background services are alive:
 
 ```bash
-php artisan storage:link
-sudo chown -R www-data:www-data /var/www/whatsapp-marketing
-sudo chmod -R 775 /var/www/whatsapp-marketing/storage /var/www/whatsapp-marketing/bootstrap/cache
+docker compose ps
+docker compose logs --tail=50 queue scheduler
 ```
 
-`storage:link` creates the `public/storage` symlink. It is gitignored (a symlink is
-machine-specific), so it must be recreated on every server — without it, uploaded media
-and campaign attachments return 404.
+Then send a small test campaign — two or three contacts — and watch the queue log to
+confirm jobs are picked up. A campaign that stays "pending" means the worker is not
+running or `QUEUE_CONNECTION` is still `sync`.
 
-### Step 7 — Configure Nginx
+### Step 7 — Pin the dependency versions
+
+Once the app is confirmed working, capture the resolved versions so future builds are
+reproducible:
 
 ```bash
-sudo nano /etc/nginx/sites-available/whatsapp-marketing
+CID=$(docker compose ps -q app)
+docker cp "$CID":/var/www/html/composer.lock ./composer.lock
 ```
 
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-    root /var/www/whatsapp-marketing/public;
+Commit that file from your laptop (or directly on the server if the repo is checked out
+there) and push. Subsequent builds then use `composer install` automatically.
 
-    index index.php;
-    charset utf-8;
-    client_max_body_size 20M;
+### Step 8 — Back up the database
 
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt  { access_log off; log_not_found off; }
-}
-```
+Nothing on this stack is backed up by default. The volume survives container restarts
+but not a volume deletion or a disk failure.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/whatsapp-marketing /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+mkdir -p /root/backups
+cat > /root/backup-whatsapp.sh <<'SH'
+#!/bin/bash
+set -e
+CID=$(docker ps -qf "name=mysql" -f "label=com.docker.compose.project=whatsapp-marketing" | head -1)
+STAMP=$(date +%F-%H%M)
+docker exec "$CID" mysqldump -u root -p"$DB_ROOT_PASSWORD" --single-transaction \
+  whatsapp_marketing | gzip > "/root/backups/wa-$STAMP.sql.gz"
+find /root/backups -name 'wa-*.sql.gz' -mtime +14 -delete
+SH
+chmod +x /root/backup-whatsapp.sh
 ```
 
-The `root` must point at `public/`, not the project root — otherwise `.env` becomes
-downloadable over the web.
-
-### Step 8 — Enable HTTPS
+Adjust the container filter to match the project name Dokploy assigns, then schedule it:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+crontab -e
+# 0 3 * * * DB_ROOT_PASSWORD='<root password>' /root/backup-whatsapp.sh
 ```
 
-### Step 9 — Cache config and set up the scheduler
-
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-sudo crontab -u www-data -e
-```
-
-Add:
-
-```
-* * * * * cd /var/www/whatsapp-marketing && php artisan schedule:run >> /dev/null 2>&1
-```
-
-### Step 10 — Queue worker (needed for bulk message sending)
-
-```bash
-sudo nano /etc/systemd/system/whatsapp-worker.service
-```
-
-```ini
-[Unit]
-Description=WhatsApp Marketing Queue Worker
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-Restart=always
-RestartSec=5
-ExecStart=/usr/bin/php /var/www/whatsapp-marketing/artisan queue:work --sleep=3 --tries=3 --max-time=3600
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now whatsapp-worker
-sudo systemctl status whatsapp-worker
-```
-
-### Step 11 — Firewall
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-```
+Copy the dumps off the server periodically — a backup on the same disk as the database
+protects against mistakes, not hardware failure.
 
 ---
-
 ## Redeploying after changes
 
-```bash
-cd /var/www/whatsapp-marketing
-git pull origin main
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache && php artisan route:cache && php artisan view:cache
-sudo systemctl restart whatsapp-worker
-sudo systemctl reload php8.3-fpm
-```
+Push to `main`, then hit **Deploy** in Dokploy (or enable auto-deploy on push, which
+Dokploy drives from a GitHub webhook).
+
+The `app` container runs migrations on boot and rebuilds the config, route, and view
+caches, so there is nothing to run by hand.
+
+One thing to be aware of: `opcache.validate_timestamps=0` means PHP never re-reads
+changed source files. Editing files inside a running container has no effect. Every
+change requires a rebuild — which is exactly what Dokploy does.
 
 ---
 
@@ -362,22 +301,44 @@ sudo systemctl reload php8.3-fpm
 
 | Symptom | Cause / fix |
 |---|---|
-| `file is XXX MB; exceeds GitHub's limit` on push | A large file got committed. `git rm --cached <file>`, add it to `.gitignore`, then `git commit --amend`. If it is buried in history, use `git filter-repo`. |
-| 500 error, blank page | `tail -f storage/logs/laravel.log`. Usually permissions on `storage/` or a missing `APP_KEY`. |
-| `.env` visible in browser | Nginx `root` is pointing at the project root instead of `public/`. |
-| `Permission denied` writing logs | Re-run the `chown`/`chmod` from Step 6. |
-| Queued messages never send | Worker is down: `sudo systemctl status whatsapp-worker`. |
-| Push asks for a password repeatedly | Use a Personal Access Token, not your GitHub password. |
+| `FATAL: APP_KEY is not set` | Set `APP_KEY` in the Dokploy environment (Step 2). |
+| `ERROR: database unreachable after 120s` | MySQL failed to start. `docker compose logs mysql` — usually a bad `DB_ROOT_PASSWORD` or a full disk. |
+| Traefik returns **404** | The domain is not bound to the `app` service, or DNS has not propagated. `dig +short whatsapp.bomalogic.com` should return `84.247.187.164`. |
+| Traefik returns **502** | The app container is unhealthy. `docker compose logs app`. |
+| Site loads but CSS/JS 404 | `APP_URL` is wrong, or `FORCE_HTTPS` is false while Traefik serves https. |
+| Redirect loop | `FORCE_HTTPS=true` plus a Traefik http→https redirect. Confirm `TrustProxies` is active. |
+| Login page loads, session never persists | `SESSION_SECURE_COOKIE=true` served over http, or `SESSION_DOMAIN` set to the wrong host. |
+| Campaigns stay "pending" | Queue worker down (`docker compose logs queue`) or `QUEUE_CONNECTION=sync`. |
+| Uploaded media 404s | `storage:link` did not run. Check the entrypoint log. |
+| Certificate not issued | Let's Encrypt needs port 80 reachable. Confirm the firewall allows it and DNS resolves. |
+| Out-of-memory / container killed | The host is swapping. Lower `--innodb-buffer-pool-size`, or free memory elsewhere. |
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs --tail=100 queue
+docker compose exec app php artisan about
+docker compose exec app php artisan queue:failed
+```
 
 ---
 
 ## Security checklist before going live
 
-- [ ] `.env` is **not** in the repo (`git log --all --full-history -- .env` returns nothing)
+- [ ] `.env` is **not** in the repo — `git log --all --full-history -- .env` returns nothing
 - [ ] `APP_DEBUG=false` and `APP_ENV=production`
-- [ ] Nginx `root` ends in `/public`
-- [ ] HTTPS enabled via Certbot
-- [ ] Database user has a strong, unique password
-- [ ] Firewall active; MySQL not exposed publicly
-- [ ] WhatsApp session/auth files are gitignored — they grant full account access
-- [ ] Automated database backups configured
+- [ ] `APP_KEY` set once and recorded somewhere safe (a password manager, not the repo)
+- [ ] Distinct strong passwords for `DB_PASSWORD` and `DB_ROOT_PASSWORD`
+- [ ] No host ports published by this stack — `docker compose ps` shows no `0.0.0.0:` mappings
+- [ ] HTTPS serving a valid Let's Encrypt certificate
+- [ ] Any credential previously committed or shared has been rotated at the provider
+- [ ] Database backups scheduled **and** a restore tested at least once
+- [ ] SSH hardened: key-based auth, root password login disabled
+- [ ] The pending kernel update applied and the host rebooted
+
+> On SSH: you logged in as `root` with a password. Move to key-based authentication and
+> set `PermitRootLogin prohibit-password` in `/etc/ssh/sshd_config`. This box hosts
+> several production applications on a public IP, and password auth on root is the most
+> commonly brute-forced entry point there is.
