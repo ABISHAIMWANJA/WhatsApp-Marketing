@@ -1,10 +1,14 @@
 # =============================================================
 #  WhatsApp Marketing — production stack for Dokploy
 #
-#  Traefik (managed by Dokploy) terminates TLS and routes
-#  whatsapp.bomalogic.com to the `app` service on port 80.
-#  Nothing here publishes a host port, so the existing stack on
-#  this server is untouched.
+#  Routing is managed by Dokploy: add the domain on the service's
+#  Domains tab (service `app`, port 80) and Dokploy injects the Traefik
+#  labels at deploy time. Do not add Traefik labels here as well — two
+#  routers matching the same Host rule is undefined behaviour.
+#
+#  `app` must stay on dokploy-network; that is how Traefik reaches it.
+#  Nothing here publishes a host port, so the rest of the stack on this
+#  server is untouched.
 # =============================================================
 
 services:
@@ -24,31 +28,6 @@ services:
       mysql:   { condition: service_healthy }
       redis:   { condition: service_started }
     networks: [internal, dokploy-network]
-    labels:
-      # Traefik runs with exposedByDefault=false, so only this service is
-      # routed. Nothing else on the host is affected by these labels.
-      traefik.enable: "true"
-      traefik.docker.network: dokploy-network
-
-      # --- HTTPS ---
-      traefik.http.routers.whatsapp.rule: "Host(`whatsapp.bomalogic.com`)"
-      traefik.http.routers.whatsapp.entrypoints: websecure
-      traefik.http.routers.whatsapp.tls: "true"
-      traefik.http.routers.whatsapp.tls.certresolver: letsencrypt
-      traefik.http.routers.whatsapp.service: whatsapp
-
-      # --- HTTP: redirect to HTTPS. The ACME http-01 challenge is answered
-      #     by Traefik itself before this rule applies, so cert issuance
-      #     still works. ---
-      traefik.http.routers.whatsapp-web.rule: "Host(`whatsapp.bomalogic.com`)"
-      traefik.http.routers.whatsapp-web.entrypoints: web
-      traefik.http.routers.whatsapp-web.middlewares: whatsapp-https
-      traefik.http.routers.whatsapp-web.service: whatsapp
-      traefik.http.middlewares.whatsapp-https.redirectscheme.scheme: https
-      traefik.http.middlewares.whatsapp-https.redirectscheme.permanent: "true"
-
-      # nginx inside the container listens on 80.
-      traefik.http.services.whatsapp.loadbalancer.server.port: "80"
 
   queue:
     build:
