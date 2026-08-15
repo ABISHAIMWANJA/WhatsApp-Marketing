@@ -71,6 +71,10 @@ fi
 # Config caching. Must happen after env vars are present, and must be
 # cleared first or a stale cache from build time wins.
 # -------------------------------------------------------------
+# Skipped during the image build because it needs a live database.
+log "discovering packages"
+php artisan package:discover --quiet || log "WARN: package:discover failed"
+
 log "caching configuration"
 php artisan config:clear --quiet || true
 php artisan config:cache --quiet

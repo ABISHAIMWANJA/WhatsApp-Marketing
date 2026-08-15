@@ -47,7 +47,16 @@ RUN if [ -f composer.lock ]; then \
 
 COPY . .
 
-RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
+# --no-scripts is required: composer.json's post-autoload-dump hook runs
+# `artisan package:discover`, which boots the app. A service provider in
+# this project reads the `configurations` table during boot, so it tries
+# to reach MySQL — which does not exist at build time. Package discovery
+# runs in the entrypoint instead, once the database is up.
+#
+# The PSR-4 warnings about app/Yantrana/Support/php-gettext-1.0.12 are
+# expected and harmless: those classes are pulled in through composer's
+# `files` autoload, not the classmap.
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative --no-scripts
 
 # ---------- Stage 3: runtime ----------
 FROM base AS runtime
