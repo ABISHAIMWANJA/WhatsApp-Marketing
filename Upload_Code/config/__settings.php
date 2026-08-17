@@ -1068,7 +1068,7 @@ return [
                     'username' => 'buyer',
                     'registered_at' => '11.04.2026',
                     'licence' => 'dee257a8c3a2656b7d7fbe9a91dd8c7c41d90dc9',
-                    'signature' => sha1(array_get($_SERVER, 'HTTP_HOST', '') . 'default' . '4.5+'),
+                    'signature' => hash('sha256', array_get($_SERVER, 'HTTP_HOST', '') . 'default' . config('lwSystem.version')),
                     'sold_at' => '11.04.2026',
                 ],
             ],
