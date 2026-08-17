@@ -27,10 +27,12 @@ class AppApiAuthenticateMiddleware
             ],
         ]);
 
-        // Check if addon installed and activated or not
-        $addonLicInfo = getAppSettings('lwAddon' . 'WhatsJetChatMobileApp');
-        if ((__isEmpty($addonLicInfo['registration_id'])) or (sha1(array_get($_SERVER, 'HTTP_HOST', '') . $addonLicInfo['registration_id'] . '1.0+') !== $addonLicInfo['signature'])) {
-            abort(404, __tr('Invalid Request'));
+        // Check if addon installed and activated or not (guarded by license_check)
+        if (config('app.license_check')) {
+            $addonLicInfo = getAppSettings('lwAddon' . 'WhatsJetChatMobileApp');
+            if ((__isEmpty($addonLicInfo['registration_id'])) or (sha1(array_get($_SERVER, 'HTTP_HOST', '') . $addonLicInfo['registration_id'] . '1.0+') !== $addonLicInfo['signature'])) {
+                abort(404, __tr('Invalid Request'));
+            }
         }
 
         $isVerified = YesTokenAuth::verifyToken();

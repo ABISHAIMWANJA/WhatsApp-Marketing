@@ -11,7 +11,7 @@
     <div class="col-xl-8 mb-3 offset-xl-2 col-lg-10 offset-lg-1 col-md-12">
 @if(getAppSettings('product_registration', 'registration_id'))
 <div class="text-center mt-5 card py-5">
-	@if(sha1(array_get($_SERVER, 'HTTP_HOST', '') . getAppSettings('product_registration', 'registration_id') . '4.5+') !== getAppSettings('product_registration', 'signature'))
+	@if(config('app.license_check') and sha1(array_get($_SERVER, 'HTTP_HOST', '') . getAppSettings('product_registration', 'registration_id') . '4.5+') !== getAppSettings('product_registration', 'signature'))
 			<div class="my-5 text-danger">
 				<i class="fas fa-exclamation-triangle fa-6x mb-4 text-warning"></i>
 				<h2> <strong><?= __tr('Invalid Signature') ?></strong></h2>
