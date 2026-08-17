@@ -1063,11 +1063,12 @@ return [
                 'data_type' => 4, // json
                 'hide_value' => true,
                 'default' => [
-                    'registration_id' => 'nullnull',
-                    'email' => 'mail@mail.com',
+                    'registration_id' => 'default',
+                    'email' => 'support@your-domain.com',
+                    'username' => 'buyer',
                     'registered_at' => '11.04.2026',
                     'licence' => 'dee257a8c3a2656b7d7fbe9a91dd8c7c41d90dc9',
-                    'signature' => hash('sha256', array_get($_SERVER, 'HTTP_HOST', '') . 'nullnull' . config('lwSystem.version')),
+                    'signature' => hash('sha256', array_get($_SERVER, 'HTTP_HOST', '') . 'default' . config('lwSystem.version')),
                     'sold_at' => '11.04.2026',
                 ],
             ],

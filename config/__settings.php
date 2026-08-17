@@ -1063,11 +1063,12 @@ return [
                 'data_type' => 4, // json
                 'hide_value' => true,
                 'default' => [
-                    'registration_id' => 'nullnull',
-                    'email' => 'mail@mail.com',
+                    'registration_id' => 'default',
+                    'email' => 'support@your-domain.com',
+                    'username' => 'buyer',
                     'registered_at' => '11.04.2026',
                     'licence' => 'dee257a8c3a2656b7d7fbe9a91dd8c7c41d90dc9',
-                    'signature' => sha1(array_get($_SERVER, 'HTTP_HOST', '') . 'nullnull' . '4.5+'),
+                    'signature' => sha1(array_get($_SERVER, 'HTTP_HOST', '') . 'default' . '4.5+'),
                     'sold_at' => '11.04.2026',
                 ],
             ],
