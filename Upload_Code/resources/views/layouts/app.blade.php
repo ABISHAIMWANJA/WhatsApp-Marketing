@@ -1,6 +1,6 @@
 @php
 $hasActiveLicense = true;
-if(isLoggedIn() and (request()->route()->getName() != 'manage.configuration.product_registration') and
+if(config('app.license_check') and isLoggedIn() and (request()->route()->getName() != 'manage.configuration.product_registration') and
 (!getAppSettings('product_registration', 'registration_id') or hash('sha256', array_get($_SERVER, 'HTTP_HOST', '') .
 getAppSettings('product_registration', 'registration_id') . config('lwSystem.version')) !== getAppSettings('product_registration',
 'signature'))) {

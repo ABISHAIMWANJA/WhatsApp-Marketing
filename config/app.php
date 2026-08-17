@@ -46,6 +46,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | License Check Toggle
+    |--------------------------------------------------------------------------
+    |
+    | Toggle application license/signature verification for development or
+    | emergency troubleshooting. Set `APP_LICENSE_CHECK=false` in your
+    | environment to temporarily bypass license checks.
+    |
+    */
+    'license_check' => env('APP_LICENSE_CHECK', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |
